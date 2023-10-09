@@ -30,7 +30,7 @@ class Score(Base):
 class Lobby(Base):
     __tablename__ = "lobbies"
     id = Column(Integer, primary_key=True, index=True)
-    public_id = Column(String, unique=True, index=True, default=str(uuid.uuid4))
+    public_id = Column(String, unique=True, index=True, default=str(uuid.uuid4()))
     name = Column(String, unique=True)
 
     players = relationship("User", back_populates="lobby")

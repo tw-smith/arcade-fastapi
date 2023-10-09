@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from src.database.services.crud import get_user_service, get_score_service, get_lobby_service
 from src.database.schemas import UserCreate, ScoreCreate, LobbyCreate
@@ -27,7 +28,8 @@ def test_database_create(db):
     assert db_score_obj.player.username == "Test Username"
 
     new_lobby = LobbyCreate(
-        name="Test Lobby"
+        name="Test Lobby",
+        public_id=str(uuid.uuid4())
     )
     lobby_crud_service = get_lobby_service(db)
     db_lobby_obj = lobby_crud_service.create(new_lobby)
@@ -46,6 +48,9 @@ def test_database_get_and_list(db, seed_db):
     assert db_score_obj.player.username == "Joe Bloggs"
     db_score_list = score_crud_service.list_all()
     assert len(db_score_list) is 4
+    lobby_crud_service = get_lobby_service(db)
+    db_lobby_list = lobby_crud_service.list_all()
+    assert db_lobby_list[0].name == 'test_lobby_1'
 
 
 def test_database_search_by_username(db, seed_db):

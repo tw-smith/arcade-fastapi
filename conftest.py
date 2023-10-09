@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from datetime import datetime
 from sqlalchemy import create_engine
@@ -5,7 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 from src.dependencies import get_db
 from src.main import app
-from src.database.services.crud import UserCreate, get_user_service, ScoreCreate, get_score_service
+from src.database.services.crud import UserCreate, get_user_service, ScoreCreate, get_score_service, LobbyCreate, get_lobby_service
 from src.database.models import User
 
 
@@ -84,3 +86,17 @@ def seed_db(db):
     db_score_2_obj = score_crud_service.create(new_score_2)
     db_score_3_obj = score_crud_service.create(new_score_3)
     db_score_4_obj = score_crud_service.create(new_score_4)
+
+    new_lobby_1 = LobbyCreate(
+        name='test_lobby_1',
+        public_id=str(uuid.uuid4())
+    )
+
+    new_lobby_2 = LobbyCreate(
+        name='test_lobby_2',
+        public_id=str(uuid.uuid4())
+    )
+
+    lobby_crud_service = get_lobby_service(db)
+    db_lobby_1_obj = lobby_crud_service.create(new_lobby_1)
+    db_lobby_2_obj = lobby_crud_service.create(new_lobby_2)
