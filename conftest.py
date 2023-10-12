@@ -100,3 +100,13 @@ def seed_db(db):
     lobby_crud_service = get_lobby_service(db)
     db_lobby_1_obj = lobby_crud_service.create(new_lobby_1)
     db_lobby_2_obj = lobby_crud_service.create(new_lobby_2)
+
+@pytest.fixture(scope="function")
+def valid_jwt():
+    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJNaWNrZXkgUHVibGljIElEIn0._96DdojSoi_68fI2PGjSJg733caZimSDgIEMsTyCVBw'
+    yield token
+
+@pytest.fixture(scope="function")
+def no_user_jwt():
+    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJObyBTdWNoIFVzZXIifQ.nf0EuRorOs-uSSBm8SJYt1PiPKbiO33Q-vthBhaeVkA'
+    yield token
