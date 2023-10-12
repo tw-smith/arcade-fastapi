@@ -53,6 +53,12 @@ def seed_db(db):
     )
     db_user_obj_2 = user_crud_service.create(new_user_2)
 
+    new_user_3 = UserCreate(
+        username="Donald Duck",
+        public_id="Donald Duck ID"
+    )
+    db_user_obj_3 = user_crud_service.create(new_user_3)
+
     new_score_1 = ScoreCreate(
         date_set=datetime(2023, 12, 13, 14, 15),
         score_type="single",
@@ -104,6 +110,16 @@ def seed_db(db):
 @pytest.fixture(scope="function")
 def valid_jwt():
     token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJNaWNrZXkgUHVibGljIElEIn0._96DdojSoi_68fI2PGjSJg733caZimSDgIEMsTyCVBw'
+    yield token
+
+@pytest.fixture(scope="function")
+def valid_jwt_2():
+    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUZXN0IFB1YmxpYyBJRCJ9.Vm-KURPxlbBNFp_fEvm0xVXfgW61Mz7fKafKrqM5Npg'
+    yield token
+
+@pytest.fixture(scope="function")
+def valid_jwt_3():
+    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJEb25hbGQgRHVjayBJRCJ9.ET6BrxJAQNMBxgQsFFCj5irWp0t5Zy61KsXNIIraGLQ'
     yield token
 
 @pytest.fixture(scope="function")

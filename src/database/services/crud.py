@@ -83,6 +83,21 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
     def __init__(self, db_session: Session):
         super().__init__(Lobby, db_session)
 
+    def get_lobby_by_name(self, name) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.name == name).first()
+        return db_obj
+
+    def add_user_to_lobby(self, lobby_name: str, user: User) -> ModelType:
+        lobby_db_obj: ModelType = self.get_lobby_by_name(lobby_name)
+        if len(lobby_db_obj.players) >= 2:
+            raise HTTPException(status_code=409, detail="Lobby full")
+        user.lobby_id = lobby_db_obj.id
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        return lobby_db_obj
+
 
 def get_lobby_service(db_session: Session = Depends(get_db)) -> LobbyCRUDService:
     return LobbyCRUDService(db_session)
