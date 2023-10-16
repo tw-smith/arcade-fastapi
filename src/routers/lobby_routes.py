@@ -1,6 +1,6 @@
 import uuid
 from typing import Annotated
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from src.database.services.crud import LobbyCRUDService, get_lobby_service
@@ -32,6 +32,7 @@ async def get_lobbies(lobby_crud_service: LobbyCRUDService = Depends(get_lobby_s
 async def create_lobby(lobby: LobbyItem,
                        current_user: Annotated[User, Depends(get_authorised_user)],
                        lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
+    print(current_user)
     new_lobby = LobbyCreate(
         name=lobby.name,
         public_id=str(uuid.uuid4())

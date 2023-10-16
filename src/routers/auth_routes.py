@@ -66,4 +66,4 @@ async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     if response.status_code == 401:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Username or password incorrect, please try again.")
-    return {'access_token': response.json(), "token_type": "bearer"}
+    return {'access_token': response.json()['access_token'], "token_type": "bearer"}

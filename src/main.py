@@ -8,13 +8,18 @@ from .routers import auth_routes, highscore_routes, lobby_routes
 
 app = FastAPI()
 allowed_origins = [
-    'http://localhost:4200' #TODO remove hardcoded cors origin
+    'http://127.0.0.1:7000'
+    'http://localhost:4200/*' #TODO remove hardcoded cors origin
+    'http://localhost:4200/lobbies',
+    'localhost:4200'
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_methods=['GET', 'POST']
+    allow_origins='http://localhost:4200',
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True
 )
 
 
