@@ -6,6 +6,7 @@ from src.dependencies import get_db
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from src.database.services.crud import UserCRUDService, get_user_service
+from src.config.config import settings
 import requests
 
 router = APIRouter()
@@ -34,13 +35,14 @@ async def create_user(form_data: Annotated[SignupForm, Depends()],
     payload = {'email': form_data.email,
                'username': form_data.username,
                'password': form_data.password}
+    print(payload)
     response = requests.post(
-        'https://auth.tw-smith.me/signup?service=arcade?redirect_url=https://tourtracker.tw-smith.me/auth/login',
+        f"{settings.auth_server_url}/signup?service=arcade&redirect_url=/auth/login",
         data=payload
     )
-    if response.status_code == 400:
-        pass
-        # TODO pass 400 error to client
+    if response.status_code == 409:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Email address or username already registered.")
     new_user = UserCreate(
         username=form_data.username,
         public_id=response.json()['public_id']
@@ -52,12 +54,16 @@ async def create_user(form_data: Annotated[SignupForm, Depends()],
 @router.post("/auth/login", response_model=Token)
 async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                      db: Session = Depends(get_db)):
+    payload = {'username': form_data.username,
+               'password': form_data.password}
     response = requests.post(
-        'https://auth.tw-smith.me/auth?service=arcade',
-        data=form_data
+        f"{settings.auth_server_url}/auth?service=arcade",
+        data=payload
     )
-    if not response.ok:
-        if response.json()['detail'] == 'Account not verified':
-            pass #TODO: pass to frontend
-        pass #TODO pass to frontend
+    if response.status_code == 403:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                             detail="Email address not verified, please check your inbox for a verification link!")
+    if response.status_code == 401:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Username or password incorrect, please try again.")
     return {'access_token': response.json(), "token_type": "bearer"}

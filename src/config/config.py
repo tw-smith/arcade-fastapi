@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     secret_key: str
     jwt_algorithm: str
     access_token_expire_minutes: int
+    development: bool
+    production: bool
+    auth_server_url: str
 
 
     class Config:
