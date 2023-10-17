@@ -20,7 +20,9 @@ def test_get_highscores(client, db, seed_db):
 
 
 def test_post_highscore(client, db, seed_db, valid_jwt):
-    response = client.post(f"/highscores?token={valid_jwt}",
+    headers = {'Authorization': f"Bearer {valid_jwt}"}
+    response = client.post('/highscores',
+                           headers=headers,
                            json={'score_type': 'single', 'value': 75})
     assert response.status_code == 201
     score_service = get_score_service(db)

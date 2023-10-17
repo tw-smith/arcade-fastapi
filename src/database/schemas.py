@@ -50,13 +50,14 @@ class LobbyBase(BaseModel):
     public_id: str
 
 
+
 class LobbyCreate(LobbyBase):
     pass
 
 
 class Lobby(LobbyBase):
     id: int
-    # public_id: str
+    #public_id: str
     players: list[User] = []
 
     class Config:

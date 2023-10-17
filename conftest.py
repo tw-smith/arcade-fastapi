@@ -95,12 +95,12 @@ def seed_db(db):
 
     new_lobby_1 = LobbyCreate(
         name='test_lobby_1',
-        public_id=str(uuid.uuid4())
+        public_id='lobby_public_id_1'
     )
 
     new_lobby_2 = LobbyCreate(
         name='test_lobby_2',
-        public_id=str(uuid.uuid4())
+        public_id='lobby_public_id_2'
     )
 
     lobby_crud_service = get_lobby_service(db)
