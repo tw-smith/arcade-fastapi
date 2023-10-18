@@ -1,4 +1,5 @@
 from src.database.services.crud import LobbyCRUDService, get_lobby_service
+import socketio
 
 def test_get_lobbies(client, db, seed_db):
     response = client.get('/lobbies')
@@ -63,6 +64,22 @@ def test_join_lobby(client, db, seed_db, valid_jwt, valid_jwt_2, valid_jwt_3):
                            json={'name': 'test_lobby_2'})
     assert response.status_code == 409
     assert response.json()['detail'] == 'Lobby full'
+
+
+async def test_ws(client):
+    wsclient = socketio.AsyncClient()
+    await wsclient.connect('http://127.0.0.1:8000')
+    await wsclient.emit('testev')
+    print(wsclient)
+    assert 1==2
+
+    @wsclient.on("test_emit")
+    def foo(data):
+        print(data)
+        assert data == 'test_msg'
+
+
+
 
 
 

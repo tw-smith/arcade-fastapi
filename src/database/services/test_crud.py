@@ -66,6 +66,13 @@ def test_database_search_by_public_id(db, seed_db):
     assert db_user_obj is not None
     assert db_user_obj.username == "Mickey Mouse"
 
+def test_database_get_lobby_by_public_id(db, seed_db):
+    lobby_crud_service = get_lobby_service(db)
+    db_lobby_obj = lobby_crud_service.get(1)
+    lobby_search_obj = lobby_crud_service.get_lobby_by_public_id(db_lobby_obj.public_id)
+    assert lobby_search_obj is not None
+    assert lobby_search_obj.name == db_lobby_obj.name
+
 
 def test_database_delete(db, seed_db):
     user_crud_service = get_user_service(db)

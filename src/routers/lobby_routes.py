@@ -1,15 +1,13 @@
 import uuid
 from typing import Annotated
-from fastapi import APIRouter, Depends, status, Header
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from src.database.services.crud import LobbyCRUDService, get_lobby_service
+from src.dependencies import get_db
+from src.database.services.crud import LobbyCRUDService, get_lobby_service, UserCRUDService, get_user_service
 from src.database.schemas import LobbyCreate
 from src.database.models import User
 from src.auth_dependencies import get_authorised_user
-
-
-
+from src.websocket_dependencies import sio
 
 router = APIRouter()
 
@@ -23,13 +21,14 @@ class LobbyItem(BaseModel):
 class LobbyItemCreate(BaseModel):
     name: str
 
+
 class LobbyItemJoin(BaseModel):
     public_id: str
 
 
-
 @router.get('/lobbies', response_model=list[LobbyItem])
-async def get_lobbies(lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
+async def get_lobbies(current_user: Annotated[User, Depends(get_authorised_user)],
+                      lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
     lobby_list = lobby_crud_service.list_all()
     return_list = []
     for item in lobby_list:
@@ -54,10 +53,10 @@ async def create_lobby(lobby: LobbyItemCreate,
         public_id=str(uuid.uuid4())
     )
     db_obj = lobby_crud_service.create(new_lobby)
-    lobby_db_obj = lobby_crud_service.add_user_to_lobby(lobby.name, current_user)
+    lobby_db_obj = lobby_crud_service.add_user_to_lobby(db_obj.public_id, current_user)
     lobby_list = lobby_crud_service.list_all()
     return_list = []
-    for item in lobby_list:
+    for item in lobby_list: # TODO don't need to return player info here if we're gonna do it via WS
         player_list = []
         for player in item.players:
             player_list.append({'player_name': player.username})
@@ -70,11 +69,108 @@ async def create_lobby(lobby: LobbyItemCreate,
     return return_list
 
 @router.post('/joinlobby')
-async def join_lobby(lobby: LobbyItemCreate,
+async def join_lobby(lobby: LobbyItemJoin,
                      current_user: Annotated[User, Depends(get_authorised_user)],
                      lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
-    lobby_db_obj = lobby_crud_service.add_user_to_lobby(lobby.name, current_user)
+    lobby_db_obj = lobby_crud_service.add_user_to_lobby(lobby.public_id, current_user)
+    sio.enter_room(lobby_db_obj.public_id)
+    await sio.emit(get_lobby_status(lobby_db_obj.public_id), room=lobby_db_obj.public_id)
 
 
 
+# @router.get('/lobby/{public_id}')
+# async def lobby(public_id: str,
+#                 current_user: Annotated[User, Depends(get_authorised_user)],
+#                 lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
+#     print('LOBBY GET')
+#     lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, current_user)
+#     await sio.emit(get_lobby_status(lobby_db_obj.public_id), room=lobby_db_obj.public_id)
 
+# async def get_user_from_sid(sid) -> User:
+#     db = next(get_db())
+#     user_crud_service: UserCRUDService = get_user_service(db)
+#     session = (await sio.get_session(sid))
+#     return user_crud_service.search_by_username(session['username'])
+
+
+# async def get_lobby_id_from_sid(sid) -> str:
+#     session = await sio.get_session(sid)
+#     return session['lobby_public_id']
+
+@sio.event
+async def join_lobby_request(sid,
+                             public_id):
+    print(f"SID: {sid}")
+    db = next(get_db())
+    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    user_crud_service: UserCRUDService = get_user_service(db)
+    session = await sio.get_session(sid)
+    print(session)
+    user = user_crud_service.search_by_username(session['username'])
+    # user = await get_user_from_sid(sid)
+    lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, user)
+    await sio.save_session(sid, {'lobby_public_id': public_id})
+    await sio.emit('lobby_status_update', get_lobby_status(public_id))
+    print(public_id)
+
+@sio.event
+async def leave_lobby(sid):
+    db = next(get_db())
+    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    user_crud_service: UserCRUDService = get_user_service(db)
+    session = await sio.get_session(sid)
+    user = user_crud_service.search_by_username(session['username'])
+    lobby_crud_service.remove_user_from_lobby(user)
+    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']))
+
+
+
+@sio.event
+async def player_ready_toggle(sid):
+    print(f"SID: {sid}")
+    db = next(get_db())
+    user_crud_service: UserCRUDService = get_user_service(db)
+    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    session = await sio.get_session(sid)
+    user = user_crud_service.search_by_username(session['username'])
+    #user = await get_user_from_sid(sid)
+    user_crud_service.user_ready(user, not user.is_ready)
+    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']))
+
+
+@sio.event
+async def connect(sid, auth):
+    print(f"SID: {sid}")
+    print('AUTH AUTH AUTH')
+    print(auth.get('HTTP_TOKEN'))
+    db = next(get_db())
+    user_crud_service: UserCRUDService = get_user_service(db)
+    user = await get_authorised_user(auth.get('HTTP_TOKEN'), user_crud_service)
+    print(user.username)
+    await sio.save_session(sid, {'username': user.username})
+
+# @sio.event
+# async def lobby_status_update():
+#     await sio.emit(get_lobby_status(public_id), room=public_id)
+
+
+
+def get_lobby_status(public_id: str):
+    db = next(get_db())
+    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    lobby_db_obj = lobby_crud_service.get_lobby_by_public_id(public_id)
+    player_list = []
+    for player in lobby_db_obj.players:
+        player_list.append({
+            'username': player.username,
+            'is_ready': player.is_ready,
+            'is_host': player.is_host
+        })
+    return player_list
+
+
+
+@sio.event
+async def testev(sid):
+    print('testev')
+    await sio.emit('reply', 'reply')

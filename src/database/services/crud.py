@@ -51,13 +51,23 @@ class UserCRUDService(BaseCRUDService[User, UserCreate]):
     def __init__(self, db_session: Session):
         super().__init__(User, db_session)
 
-    def search_by_username(self, username) -> ModelType:
+    def search_by_username(self, username: str) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.username == username).first()
         return db_obj
 
-    def search_by_public_id(self, user_public_id) -> ModelType:
+    def search_by_public_id(self, user_public_id: str) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == user_public_id).first()
         return db_obj
+
+    def user_ready(self, user: User, is_ready: bool) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.username == user.username).first()
+        db_obj.is_ready = is_ready
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        return db_obj
+
 
 
 def get_user_service(db_session: Session = Depends(get_db)) -> UserCRUDService:
@@ -87,8 +97,12 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.name == name).first()
         return db_obj
 
-    def add_user_to_lobby(self, lobby_name: str, user: User) -> ModelType:
-        lobby_db_obj: ModelType = self.get_lobby_by_name(lobby_name)
+    def get_lobby_by_public_id(self, public_id) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == public_id).first()
+        return db_obj
+
+    def add_user_to_lobby(self, public_id: str, user: User) -> ModelType:
+        lobby_db_obj: ModelType = self.get_lobby_by_public_id(public_id)
         if len(lobby_db_obj.players) >= 2:
             raise HTTPException(status_code=409, detail="Lobby full")
         user.lobby_id = lobby_db_obj.id
@@ -97,6 +111,14 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
         except IntegrityError as e:
             raise HTTPException(status_code=409, detail="Database error")
         return lobby_db_obj
+
+    def remove_user_from_lobby(self, user: User) -> ModelType: # TODO write tests for this
+        user.lobby = None
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        return user
 
 
 def get_lobby_service(db_session: Session = Depends(get_db)) -> LobbyCRUDService:

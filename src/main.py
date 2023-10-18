@@ -2,11 +2,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth_routes, highscore_routes, lobby_routes
-
-
-
+from src.websocket_dependencies import socket_app
 
 app = FastAPI()
+
+
+#socket_manager.mount_to("/", app)
 allowed_origins = [
     'http://127.0.0.1:7000'
     'http://localhost:4200/*' #TODO remove hardcoded cors origin
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(auth_routes.router)
 app.include_router(highscore_routes.router)
 app.include_router(lobby_routes.router)
+app.mount("", socket_app)
 
 
 
