@@ -113,11 +113,15 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
         return lobby_db_obj
 
     def remove_user_from_lobby(self, user: User) -> ModelType: # TODO write tests for this
+        lobby_db_obj = self.get(user.lobby_id)
         user.lobby = None
         try:
             self.db_session.commit()
         except IntegrityError as e:
             raise HTTPException(status_code=409, detail="Database error")
+        if len(lobby_db_obj.players) == 0:
+            self.db_session.delete(lobby_db_obj)
+            self.db_session.commit()
         return user
 
 

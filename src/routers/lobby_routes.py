@@ -68,13 +68,13 @@ async def create_lobby(lobby: LobbyItemCreate,
     print(lobby_list)
     return return_list
 
-@router.post('/joinlobby')
-async def join_lobby(lobby: LobbyItemJoin,
-                     current_user: Annotated[User, Depends(get_authorised_user)],
-                     lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
-    lobby_db_obj = lobby_crud_service.add_user_to_lobby(lobby.public_id, current_user)
-    sio.enter_room(lobby_db_obj.public_id)
-    await sio.emit(get_lobby_status(lobby_db_obj.public_id), room=lobby_db_obj.public_id)
+# @router.post('/joinlobby')
+# async def join_lobby(lobby: LobbyItemJoin,
+#                      current_user: Annotated[User, Depends(get_authorised_user)],
+#                      lobby_crud_service: LobbyCRUDService = Depends(get_lobby_service)):
+#     lobby_db_obj = lobby_crud_service.add_user_to_lobby(lobby.public_id, current_user)
+#     sio.enter_room(lobby_db_obj.public_id)
+#     await sio.emit(get_lobby_status(lobby_db_obj.public_id), room=lobby_db_obj.public_id)
 
 
 
@@ -109,8 +109,10 @@ async def join_lobby_request(sid,
     user = user_crud_service.search_by_username(session['username'])
     # user = await get_user_from_sid(sid)
     lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, user)
-    await sio.save_session(sid, {'lobby_public_id': public_id})
-    await sio.emit('lobby_status_update', get_lobby_status(public_id))
+    # await sio.save_session(sid, {'lobby_public_id': public_id})
+    db.close()
+    await sio.enter_room(sid, session['lobby_public_id'])
+    await sio.emit('lobby_status_update', get_lobby_status(public_id), room=session['lobby_public_id'])
     print(public_id)
 
 @sio.event
@@ -121,7 +123,11 @@ async def leave_lobby(sid):
     session = await sio.get_session(sid)
     user = user_crud_service.search_by_username(session['username'])
     lobby_crud_service.remove_user_from_lobby(user)
-    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']))
+    db.close()
+    await sio.leave_room(sid, session['lobby_public_id'])
+    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']), room=session['lobby_public_id'])
+    await sio.disconnect(sid)
+
 
 
 
@@ -134,20 +140,29 @@ async def player_ready_toggle(sid):
     session = await sio.get_session(sid)
     user = user_crud_service.search_by_username(session['username'])
     #user = await get_user_from_sid(sid)
-    user_crud_service.user_ready(user, not user.is_ready)
-    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']))
+    if user.is_ready:
+        is_ready = False
+    else:
+        is_ready = True
+    user_crud_service.user_ready(user, is_ready)
+    print(user.is_ready)
+    player_list = get_lobby_status(session['lobby_public_id'])
+    print(player_list)
+    db.close()
+    await sio.emit('lobby_status_update', player_list, room=session['lobby_public_id'])
 
 
 @sio.event
 async def connect(sid, auth):
     print(f"SID: {sid}")
-    print('AUTH AUTH AUTH')
-    print(auth.get('HTTP_TOKEN'))
     db = next(get_db())
     user_crud_service: UserCRUDService = get_user_service(db)
     user = await get_authorised_user(auth.get('HTTP_TOKEN'), user_crud_service)
     print(user.username)
-    await sio.save_session(sid, {'username': user.username})
+    db.close()
+    await sio.save_session(sid, {'username': user.username,
+                                 'lobby_public_id': auth.get('HTTP_LOBBY_ID')})
+
 
 # @sio.event
 # async def lobby_status_update():
@@ -158,6 +173,7 @@ async def connect(sid, auth):
 def get_lobby_status(public_id: str):
     db = next(get_db())
     lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    print(f"search lobby id: {public_id}")
     lobby_db_obj = lobby_crud_service.get_lobby_by_public_id(public_id)
     player_list = []
     for player in lobby_db_obj.players:
