@@ -142,7 +142,17 @@ async def set_initial_food(sid, data):
 
 
 @sio.event
-async def game_update(sid, data):
+async def snake_update(sid, data):
+    session = await sio.get_session(sid)
+    await sio.emit('new_snake_parameters', data, room=session['lobby_public_id'], skip_sid=sid)
+
+@sio.event
+async def food_update(sid, data):
+    session = await sio.get_session(sid)
+    await sio.emit('new_food_parameters', data, room=session['lobby_public_id'], skip_sid=sid)
+
+@sio.event
+async def game_params_update(sid, data):
     session = await sio.get_session(sid)
     await sio.emit('new_game_parameters', data, room=session['lobby_public_id'], skip_sid=sid)
 
