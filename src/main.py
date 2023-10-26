@@ -12,23 +12,25 @@ allowed_origins = [
     'http://127.0.0.1:7000'
     'http://localhost:4200/*' #TODO remove hardcoded cors origin
     'http://localhost:4200/lobbies',
-    'localhost:4200'
+    'localhost:4200',
+    'https://arcade2.tw-smith.me',
+    'https://arcade.tw-smith.me'
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins='http://localhost:4200',
+    allow_origins=['http://localhost:4200', 'https://arcade2.tw-smith.me', 'https://arcade.tw-smith.me'],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True
 )
 
 
-app.include_router(auth_routes.router)
-app.include_router(highscore_routes.router)
-app.include_router(lobby_routes.router)
-app.include_router(lobby_events.router)
-app.include_router(game_events.router)
+app.include_router(auth_routes.router, prefix='/api')
+app.include_router(highscore_routes.router, prefix='/api')
+app.include_router(lobby_routes.router, prefix='/api')
+app.include_router(lobby_events.router, prefix='/api')
+app.include_router(game_events.router, prefix='/api')
 app.mount("", socket_app)
 
 
