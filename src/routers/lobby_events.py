@@ -3,6 +3,7 @@ from src.dependencies import get_db
 from src.database.services.crud import UserCRUDService, LobbyCRUDService, get_user_service, get_lobby_service
 from src.websocket_dependencies import sio
 from src.auth_dependencies import get_authorised_user
+from fastapi.exceptions import HTTPException
 
 router = APIRouter()
 
@@ -43,7 +44,11 @@ async def join_lobby_request(sid,
     session = await sio.get_session(sid)
     user = user_crud_service.search_by_username(session['username'])
     # user = await get_user_from_sid(sid)
-    lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, user)
+    try:
+        lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, user)
+    except HTTPException as e:
+        if e.detail == 'Lobby full':
+            return 'Full'
     # await sio.save_session(sid, {'lobby_public_id': public_id})
     db.close()
     await sio.enter_room(sid, session['lobby_public_id'])
