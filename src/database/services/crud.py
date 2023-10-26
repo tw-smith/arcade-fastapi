@@ -95,10 +95,14 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
 
     def get_lobby_by_name(self, name) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.name == name).first()
+        if db_obj is None:
+            raise HTTPException(status_code=404, detail='Not Found')
         return db_obj
 
     def get_lobby_by_public_id(self, public_id) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == public_id).first()
+        if db_obj is None:
+            raise HTTPException(status_code=404, detail='Not Found')
         return db_obj
 
     def add_user_to_lobby(self, public_id: str, user: User) -> ModelType:

@@ -7,11 +7,14 @@ from fastapi.exceptions import HTTPException
 
 router = APIRouter()
 
+
 def get_lobby_status(public_id: str):
     db = next(get_db())
     lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
     print(f"search lobby id: {public_id}")
     lobby_db_obj = lobby_crud_service.get_lobby_by_public_id(public_id)
+    if lobby_db_obj is None: # lobby doesn't exist any more because last player has left
+        return []
     player_list = []
     for player in lobby_db_obj.players:
         player_list.append({
@@ -64,8 +67,11 @@ async def join_lobby_request(sid,
     try:
         lobby_db_obj = lobby_crud_service.add_user_to_lobby(public_id, user)
     except HTTPException as e:
-        if e.detail == 'Lobby full':
+        if e.status_code == 409:
             return 'Full'
+        if e.status_code == 404:
+            return 'Not Found'
+
     # await sio.save_session(sid, {'lobby_public_id': public_id})
     db.close()
     await sio.enter_room(sid, session['lobby_public_id'])
