@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth_routes, highscore_routes, lobby_routes
+from .routers import auth_routes, highscore_routes, lobby_routes, lobby_events, game_events
 from src.websocket_dependencies import socket_app
 
 app = FastAPI()
@@ -27,6 +27,8 @@ app.add_middleware(
 app.include_router(auth_routes.router)
 app.include_router(highscore_routes.router)
 app.include_router(lobby_routes.router)
+app.include_router(lobby_events.router)
+app.include_router(game_events.router)
 app.mount("", socket_app)
 
 
