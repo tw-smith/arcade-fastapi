@@ -1,4 +1,4 @@
-from typing import Any, Optional, TypeVar, Generic, List
+from typing import Any, Optional, TypeVar, Generic, List, Literal
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -51,9 +51,23 @@ class UserCRUDService(BaseCRUDService[User, UserCreate]):
     def __init__(self, db_session: Session):
         super().__init__(User, db_session)
 
-    def search_by_username(self, username) -> ModelType:
+    def search_by_username(self, username: str) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.username == username).first()
         return db_obj
+
+    def search_by_public_id(self, user_public_id: str) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == user_public_id).first()
+        return db_obj
+
+    def user_ready(self, user: User, is_ready: bool) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.username == user.username).first()
+        db_obj.is_ready = is_ready
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        return db_obj
+
 
 
 def get_user_service(db_session: Session = Depends(get_db)) -> UserCRUDService:
@@ -63,7 +77,13 @@ def get_user_service(db_session: Session = Depends(get_db)) -> UserCRUDService:
 class ScoreCRUDService(BaseCRUDService[Score, ScoreCreate]):
     def __init__(self, db_session: Session):
         super().__init__(Score, db_session)
-#TODO: search by user functionality
+
+    def get_high_scores(self, score_type: Literal["multi", "single"], count: int = 10, user_public_id: str = None) -> List[Score]:
+        if user_public_id:
+            db_list = self.db_session.query(Score).filter(Score.player.has(public_id=user_public_id), Score.score_type == score_type).order_by(Score.value.desc()).limit(count).all()
+        else:
+            db_list = self.db_session.query(Score).filter(Score.score_type == score_type).order_by(Score.value.desc()).limit(count).all()
+        return db_list
 
 def get_score_service(db_session: Session = Depends(get_db)) -> ScoreCRUDService:
     return ScoreCRUDService(db_session)
@@ -72,6 +92,41 @@ def get_score_service(db_session: Session = Depends(get_db)) -> ScoreCRUDService
 class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
     def __init__(self, db_session: Session):
         super().__init__(Lobby, db_session)
+
+    def get_lobby_by_name(self, name) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.name == name).first()
+        if db_obj is None:
+            raise HTTPException(status_code=404, detail='Not Found')
+        return db_obj
+
+    def get_lobby_by_public_id(self, public_id) -> ModelType:
+        db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == public_id).first()
+        if db_obj is None:
+            raise HTTPException(status_code=404, detail='Not Found')
+        return db_obj
+
+    def add_user_to_lobby(self, public_id: str, user: User) -> ModelType:
+        lobby_db_obj: ModelType = self.get_lobby_by_public_id(public_id)
+        if len(lobby_db_obj.players) >= 2:
+            raise HTTPException(status_code=409, detail="Lobby full")
+        user.lobby_id = lobby_db_obj.id
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        return lobby_db_obj
+
+    def remove_user_from_lobby(self, user: User) -> ModelType: # TODO write tests for this
+        lobby_db_obj = self.get(user.lobby_id)
+        user.lobby = None
+        try:
+            self.db_session.commit()
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database error")
+        if len(lobby_db_obj.players) == 0:
+            self.db_session.delete(lobby_db_obj)
+            self.db_session.commit()
+        return user
 
 
 def get_lobby_service(db_session: Session = Depends(get_db)) -> LobbyCRUDService:

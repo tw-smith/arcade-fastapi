@@ -47,6 +47,8 @@ class User(UserBase):
 
 class LobbyBase(BaseModel):
     name: str
+    public_id: str
+
 
 
 class LobbyCreate(LobbyBase):
@@ -55,7 +57,7 @@ class LobbyCreate(LobbyBase):
 
 class Lobby(LobbyBase):
     id: int
-    public_id: str
+    #public_id: str
     players: list[User] = []
 
     class Config:
