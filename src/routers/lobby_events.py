@@ -35,6 +35,23 @@ async def connect(sid, auth):
 
 
 @sio.event
+async def disconnect(sid):
+    db = next(get_db())
+    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+    user_crud_service: UserCRUDService = get_user_service(db)
+    session = await sio.get_session(sid)
+    user = user_crud_service.search_by_username(session['username'])
+    user_crud_service.user_ready(user, False)
+    lobby_crud_service.remove_user_from_lobby(user)
+    db.close()
+    await sio.leave_room(sid, session['lobby_public_id'])
+    try:
+        await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']), room=session['lobby_public_id'])
+    except HTTPException as e:
+        pass
+    # await sio.disconnect(sid)
+
+@sio.event
 async def join_lobby_request(sid,
                              public_id):
     print(f"SID: {sid}")
@@ -55,19 +72,19 @@ async def join_lobby_request(sid,
     await sio.emit('lobby_status_update', get_lobby_status(public_id), room=session['lobby_public_id'])
 
 
-@sio.event
-async def leave_lobby(sid):
-    db = next(get_db())
-    lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
-    user_crud_service: UserCRUDService = get_user_service(db)
-    session = await sio.get_session(sid)
-    user = user_crud_service.search_by_username(session['username'])
-    user_crud_service.user_ready(user, False)
-    lobby_crud_service.remove_user_from_lobby(user)
-    db.close()
-    await sio.leave_room(sid, session['lobby_public_id'])
-    await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']), room=session['lobby_public_id'])
-    await sio.disconnect(sid)
+# @sio.event
+# async def leave_lobby(sid):
+#     db = next(get_db())
+#     lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
+#     user_crud_service: UserCRUDService = get_user_service(db)
+#     session = await sio.get_session(sid)
+#     user = user_crud_service.search_by_username(session['username'])
+#     user_crud_service.user_ready(user, False)
+#     lobby_crud_service.remove_user_from_lobby(user)
+#     db.close()
+#     await sio.leave_room(sid, session['lobby_public_id'])
+#     await sio.emit('lobby_status_update', get_lobby_status(session['lobby_public_id']), room=session['lobby_public_id'])
+#     await sio.disconnect(sid)
 
 
 @sio.event
