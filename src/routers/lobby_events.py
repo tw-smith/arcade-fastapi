@@ -1,7 +1,7 @@
-import logging
 
+from urllib.parse import urlparse
 from fastapi import APIRouter
-from src.dependencies import get_db
+from src.dependencies import get_db, logger
 from src.database.services.crud import UserCRUDService, LobbyCRUDService, get_user_service, get_lobby_service
 from src.websocket_dependencies import sio
 from src.auth_dependencies import get_authorised_user
@@ -32,13 +32,18 @@ def get_lobby_status(public_id: str):
 @sio.event
 async def connect(sid, auth):
     print(f"SID: {sid}")
+    referer_url = auth.get('HTTP_REFERER')
+    url_path = urlparse(referer_url)[2]
+    url_path = str.split(url_path, '/')
+    lobby_id = url_path[2]
+    logger.warning(f"Referer lobby id {lobby_id}")
     db = next(get_db())
     user_crud_service: UserCRUDService = get_user_service(db)
     user = await get_authorised_user(auth.get('HTTP_TOKEN'), user_crud_service)
     print(user.username)
     db.close()
     await sio.save_session(sid, {'username': user.username,
-                                 'lobby_public_id': auth.get('HTTP_LOBBY_ID')})
+                                 'lobby_public_id': lobby_id})
 
 
 @sio.event
