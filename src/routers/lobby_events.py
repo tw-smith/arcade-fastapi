@@ -1,14 +1,18 @@
+import logging
+
 from fastapi import APIRouter
 from src.dependencies import get_db
 from src.database.services.crud import UserCRUDService, LobbyCRUDService, get_user_service, get_lobby_service
 from src.websocket_dependencies import sio
 from src.auth_dependencies import get_authorised_user
 from fastapi.exceptions import HTTPException
+from src.dependencies import logger
 
 router = APIRouter()
 
 
 def get_lobby_status(public_id: str):
+    logger.warning(f"Public ID: {public_id}")
     db = next(get_db())
     lobby_crud_service: LobbyCRUDService = get_lobby_service(db)
     print(f"search lobby id: {public_id}")

@@ -6,7 +6,7 @@ from fastapi import Depends
 from fastapi.exceptions import HTTPException
 from ..models import User, Score, Lobby
 from ..schemas import UserCreate, ScoreCreate, LobbyCreate
-from src.dependencies import get_db
+from src.dependencies import get_db, logger
 from src.database.services.database import Base
 
 
@@ -53,10 +53,16 @@ class UserCRUDService(BaseCRUDService[User, UserCreate]):
 
     def search_by_username(self, username: str) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.username == username).first()
+        if db_obj is None:
+            logger.warning(f"User not found by username {username}")
+            raise HTTPException(status_code=404, detail="Not found")
         return db_obj
 
     def search_by_public_id(self, user_public_id: str) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == user_public_id).first()
+        if db_obj is None:
+            logger.warning(f"User not found by public_id {user_public_id}")
+            raise HTTPException(status_code=404, detail="Not found")
         return db_obj
 
     def user_ready(self, user: User, is_ready: bool) -> ModelType:
@@ -96,12 +102,14 @@ class LobbyCRUDService(BaseCRUDService[Lobby, LobbyCreate]):
     def get_lobby_by_name(self, name) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.name == name).first()
         if db_obj is None:
+            logger.warning(f"Lobby not found by name {name}")
             raise HTTPException(status_code=404, detail='Not Found')
         return db_obj
 
     def get_lobby_by_public_id(self, public_id) -> ModelType:
         db_obj: ModelType = self.db_session.query(self.model).filter(self.model.public_id == public_id).first()
         if db_obj is None:
+            logger.warning(f"Lobby not found by ID {public_id}")
             raise HTTPException(status_code=404, detail='Not Found')
         return db_obj
 

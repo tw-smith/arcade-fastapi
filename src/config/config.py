@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     development: bool
     production: bool
     auth_server_url: str
+    route_prefix: str
 
 
     class Config:
