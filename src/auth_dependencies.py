@@ -39,11 +39,11 @@ async def get_authorised_user(token: Annotated[str, Depends(oauth2_scheme)], use
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="JWT error"
         )
-    user = user_crud_service.search_by_public_id(public_id)
-    if user is None:
-        print('user is none')
+    try:
+        user = user_crud_service.search_by_public_id(public_id)
+    except HTTPException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="user is none"
+            detail="User does not exist"
         )
     return user

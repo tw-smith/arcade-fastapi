@@ -2,9 +2,11 @@ import uuid
 
 import pytest
 from datetime import datetime
+from urllib.parse import urljoin
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
+from src.config.config import settings
 from src.dependencies import get_db
 from src.main import app
 from src.database.services.crud import UserCreate, get_user_service, ScoreCreate, get_score_service, LobbyCreate, get_lobby_service
@@ -35,6 +37,9 @@ def db(db_engine):
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
     with TestClient(app) as c:
+        # url = urljoin(str(c.base_url), settings.route_prefix)
+        # c.base_url = url
+        # print(c.base_url)
         yield c
 
 

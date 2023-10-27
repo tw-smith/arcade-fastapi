@@ -1,5 +1,7 @@
 import uuid
+import pytest
 from datetime import datetime
+from fastapi.exceptions import HTTPException
 from src.database.services.crud import get_user_service, get_score_service, get_lobby_service
 from src.database.schemas import UserCreate, ScoreCreate, LobbyCreate
 
@@ -78,8 +80,8 @@ def test_database_delete(db, seed_db):
     user_crud_service = get_user_service(db)
     db_user_obj = user_crud_service.delete(1)
     db_user_obj_2 = user_crud_service.delete(2)
-    db_search_user_obj = user_crud_service.search_by_username("Joe Bloggs")
-    assert db_search_user_obj is None
+    with pytest.raises(HTTPException) as e:
+        db_search_user_obj = user_crud_service.search_by_username("Joe Bloggs")
     score_crud_service = get_score_service(db)
     db_score_list = score_crud_service.list_all()
     assert len(db_score_list) is 0

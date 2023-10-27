@@ -1,9 +1,10 @@
 from src.database.services.crud import LobbyCRUDService, get_lobby_service
+from src.config.config import settings
 import socketio
 
 def test_get_lobbies(client, db, seed_db, valid_jwt):
     headers = {'Authorization': f"Bearer {valid_jwt}"}
-    response = client.get('/lobbies', headers=headers)
+    response = client.get(f"{settings.route_prefix}/lobbies", headers=headers)
     assert len(response.json()) == 2
     assert response.json()[0]['name'] == 'test_lobby_1'
     assert response.json()[0]['public_id'] == 'lobby_public_id_1'
@@ -11,7 +12,7 @@ def test_get_lobbies(client, db, seed_db, valid_jwt):
 
 def test_create_lobby(client, db, seed_db, valid_jwt):
     headers = {'Authorization': f"Bearer {valid_jwt}"}
-    response = client.post('/lobbies',
+    response = client.post(f"{settings.route_prefix}/lobbies",
                            headers=headers,
                            json={'name': 'test_lobby_3'})
     assert response.status_code == 201
@@ -25,14 +26,14 @@ def test_create_lobby(client, db, seed_db, valid_jwt):
 
 
 def test_create_lobby_no_token(client, db, seed_db):
-    response = client.post('/lobbies',
+    response = client.post(f"{settings.route_prefix}/lobbies",
                            json={'name': 'test_lobby_3'})
     assert response.status_code == 401
 
 
 def test_create_lobby_no_such_user(client, db, seed_db, no_user_jwt):
     headers = {'Authorization': f"Bearer {no_user_jwt}"}
-    response = client.post('/lobbies',
+    response = client.post(f"{settings.route_prefix}/lobbies",
                            headers=headers,
                            json={'name': 'test_lobby_3'})
     assert response.status_code == 401
