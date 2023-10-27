@@ -37,7 +37,7 @@ async def create_user(form_data: Annotated[SignupForm, Depends()],
                'password': form_data.password}
     print(payload)
     response = requests.post(
-        f"{settings.auth_server_url}/signup?service=arcade&redirect_url=/auth/login",
+        f"{settings.auth_server_url}/signup?service=arcade&redirect_url={settings.backend_url}/api/auth/login",
         data=payload
     )
     if response.status_code == 409:
