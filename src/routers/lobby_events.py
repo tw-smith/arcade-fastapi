@@ -33,6 +33,10 @@ def get_lobby_status(public_id: str):
 async def connect(sid, auth):
     print(f"SID: {sid}")
     referer_url = auth.get('HTTP_REFERER')
+    logger.warning(f"Lobby ID header is {auth.get('HTTP_LOBBY_ID')}")
+    logger.warning(f"Lobby ID header is {auth.get('HTTP_LOBBY-ID')}")
+    print(referer_url)
+    print(auth)
     url_path = urlparse(referer_url)[2]
     url_path = str.split(url_path, '/')
     lobby_id = url_path[2]
